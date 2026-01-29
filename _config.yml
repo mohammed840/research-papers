@@ -6,6 +6,8 @@ theme: minima
 markdown: kramdown
 kramdown:
   input: GFM
+include:
+  - main-4.pdf
 collections:
   papers:
     output: true
