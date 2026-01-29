@@ -3,7 +3,7 @@ title: "Training a Deep Q-Network to Master Uno: A Comprehensive Study in Reinfo
 date: 2026-01-01
 authors: "Mohammed Alshehri"
 year: 2026
-pdf: "/main-4.pdf"
+pdf: "/assets/main-4.pdf"
 tldr: "We train a Deep Q-Network (DQN) agent for two-player Uno using a fixed-dimensional state encoding and masked action encoding, and evaluate it using large-scale simulations and head-to-head tournaments against API-served LLM opponents."
 highlights:
   - "Formulates Uno as a value-based RL problem under imperfect information and stochastic transitions."
