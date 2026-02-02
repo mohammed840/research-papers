@@ -61,30 +61,22 @@
 We study Deep Q-Network (DQN) learning for Uno, an imperfect-information card game with stochastic transitions and a variable legal action set. We introduce a fixed-dimensional state encoding and a masked discrete action encoding, and train the agent using tournament-based experience collection.
 
 Using 100{,}000 random-play simulations, we report baseline game statistics and evaluate the learned agent against API-served LLM opponents. Because LLM endpoints may change over time, these results are conditional on the specific model identifiers and access configuration.
+
+\begin{quote}
+\textbf{Principal finding:} Our DQN agent achieves an 80\% win rate against Gemini 3 Flash and GPT 5.2 in our evaluation harness, but only a 20\% win rate against Opus 4.5.
+\end{quote}
 \end{abstract}
 
 \textbf{Keywords:} reinforcement learning; DQN; imperfect information; card games; evaluation; large language models
 
 \section{Introduction and Motivation}
 \subsection{The challenge of imperfect information games}
-Card games are a standard benchmark for decision-making under uncertainty. Unlike perfect-information games (e.g., Chess, Go), Uno introduces:
+Card games are a standard benchmark for decision-making under uncertainty. Unlike perfect-information games (e.g., Chess, Go), Uno introduces: \textbf{imperfect information} (opponents' hands are hidden), \textbf{stochastic transitions} (shuffling and drawing induce randomness), \textbf{variable action spaces} (legal actions change with the top discard card and the hand), and \textbf{delayed rewards} (local actions may have long-term consequences).
 
 This work builds on deep reinforcement learning methods for control \parencite{mnih2015human} and subsequent improvements in stabilizing value-based learning \parencite{vanhasselt2016double}.
-\begin{itemize}
-  \item \textbf{Imperfect information}: opponents' hands are hidden.
-  \item \textbf{Stochastic transitions}: shuffling and drawing induce randomness.
-  \item \textbf{Variable action spaces}: legal actions change with the top discard card and the hand.
-  \item \textbf{Delayed rewards}: local actions may have long-term consequences.
-\end{itemize}
 
 \subsection{Research objectives}
-We pursue four objectives:
-\begin{itemize}
-  \item Statistical characterization of baseline play.
-  \item Implementation and training of a DQN agent.
-  \item Comparative evaluation against random baselines and frontier LLMs.
-  \item Deployment of an interactive web interface for demonstration.
-\end{itemize}
+We pursue four objectives: (1) statistical characterization of baseline play; (2) implementation and training of a DQN agent; (3) comparative evaluation against random baselines and frontier LLMs; and (4) deployment of an interactive web interface for demonstration.
 
 \subsection{Contributions}
 Our contributions include (i) a fixed-dimensional state encoding, (ii) tournament-based experience collection, (iii) empirical comparisons versus LLM-based opponents, and (iv) a deployable system design.
@@ -98,6 +90,11 @@ We model the environment as a partially observable sequential decision problem: 
 
 \section{Related work}
 Deep reinforcement learning for control with value-based methods has been widely studied, including the original DQN formulation \parencite{mnih2015human} and Double DQN \parencite{vanhasselt2016double}. Multiple stabilisation and performance extensions have been proposed, including dueling networks \parencite{wang2016dueling}, prioritised experience replay \parencite{schaul2016prioritized}, and combined variants such as Rainbow \parencite{hessel2018rainbow}. For card-game research and benchmarking, RLCard provides a general-purpose toolkit \parencite{zha2019rlcard}.
+
+\subsection{Reinforcement learning in imperfect information games (context)}
+A large body of work addresses imperfect information games using equilibrium-seeking methods. Neural Fictitious Self-Play (NFSP) combines deep reinforcement learning with fictitious play to approximate Nash equilibria in large games \parencite{heinrich2016nfsp}. Counterfactual Regret Minimization (CFR) and its variants compute approximate equilibria by minimizing counterfactual regret over a game tree \parencite{zinkevich2007cfr}. For poker, systems such as DeepStack and Libratus combine regret minimization with learned value approximators and real-time subgame solving \parencite{moravcik2017deepstack,brown2017libratus}.
+
+In this work we adopt a simpler value-based approach (DQN/Double DQN) with explicit legality masking, and evaluate primarily against fixed opponents (random, heuristic, and API-served LLM agents) rather than targeting equilibrium play.
 
 A course report by Brown, Jasson and Swarnakar \parencite{brown_uno_rl_report} also explores Uno with DQN and DeepSARSA in an RLCard-based environment, focusing on multi-player games (3--5 players) and tournament-style experience collection.
 
@@ -211,10 +208,9 @@ In standard DQN, the maximisation in $y_t$ can introduce positive bias (``overes
 
 \subsection{Experience replay and target network}
 DQN uses two key stabilisation mechanisms \parencite{mnih2015human}:
-\begin{itemize}
-  \item \textbf{Experience replay.} Transitions are stored in a replay buffer $\mathcal{D}$ and mini-batches are sampled uniformly during training. This breaks short-term temporal correlations and improves sample efficiency.
-  \item \textbf{Target network.} A separate network with parameters $\theta^{-}$ is updated periodically (every $C$ gradient steps) from the online network parameters $\theta$, reducing non-stationarity of TD targets.
-\end{itemize}
+\textbf{Experience replay.} Transitions are stored in a replay buffer $\mathcal{D}$ and mini-batches are sampled uniformly during training; this breaks short-term temporal correlations and improves sample efficiency.
+
+\textbf{Target network.} A separate network with parameters $\theta^{-}$ is updated periodically (every $C$ gradient steps) from the online network parameters $\theta$, reducing non-stationarity of TD targets.
 
 \FloatBarrier
 \subsection{State representation}
@@ -244,6 +240,12 @@ Total & 420 & Complete state representation \\
 
 \paragraph{Why bucketed counts?}
 We use $(0,1,2+)$ buckets rather than raw counts to keep the input scale bounded and to emphasise strategically relevant distinctions (e.g., ``have at least one playable card type'' versus ``none''). In a two-player setting, a coarse opponent model (estimated counts) is often sufficient to induce defensive play (e.g., holding wild cards) without requiring full belief-state inference.
+
+\paragraph{Opponent-estimation transparency.}
+Planes 3--5 estimate opponent card distributions using only publicly observable information (cards played, the number of draws, and deck-card conservation). Our implementation performs this tracking in the encoder utilities (e.g., \texttt{uno/encoding.py}); critically, it never accesses the opponent's private hand contents \parencite{policyuno_repo}.
+
+\paragraph{Opponent-estimation transparency.}
+Planes 3--5 estimate opponent card distributions using only publicly observable information (cards played, the number of draws, and deck-card conservation). Our implementation performs this tracking in the encoder utilities (e.g., \texttt{uno/encoding.py}); critically, it never accesses the opponent's private hand contents \parencite{policyuno_repo}.
 
 \subsection{Action space and legality masking}
 \FloatBarrier
@@ -278,6 +280,30 @@ Let $m(s)\in\{0,1\}^{61}$ be a binary mask indicating action legality in state $
 \end{equation}
 which guarantees that illegal moves are never chosen.
 
+\paragraph{Masking in the TD target.}
+In addition to masking during action selection, we also mask illegal actions when computing the bootstrap term in the TD target. Concretely, before taking $\max_{a'}$ over next-state actions, we set the Q-values of illegal actions to a large negative constant so they cannot become the maximizer \parencite{policyuno_repo}.
+
+\begin{lstlisting}[language=Python]
+# Next-state bootstrap with legality masking
+next_q = q_target(next_states)                 # (B, 61)
+next_q = next_q - (1 - next_legal_masks) * 1e9
+next_q_max = next_q.max(dim=1)[0]
+
+y = rewards + gamma * next_q_max * (1 - dones)
+\end{lstlisting}
+
+\paragraph{Masking in the TD target.}
+In addition to masking during action selection, we also mask illegal actions when computing the bootstrap term in the TD target. Concretely, before taking $\max_{a'}$ over next-state actions, we set the Q-values of illegal actions to a large negative constant so they cannot become the maximizer \parencite{policyuno_repo}.
+
+\begin{lstlisting}[language=Python]
+# Next-state bootstrap with legality masking
+next_q = q_target(next_states)                 # (B, 61)
+next_q = next_q - (1 - next_legal_masks) * 1e9
+next_q_max = next_q.max(dim=1)[0]
+
+y = rewards + gamma * next_q_max * (1 - dones)
+\end{lstlisting}
+
 \subsection{Network architecture}
 Our Q-network maps 420 input features to 61 Q-values using a fully-connected multilayer perceptron. This choice is appropriate because the observation is already a compact, hand-crafted vector rather than an image.
 
@@ -305,11 +331,11 @@ All experimental results in this paper are conditional on the ruleset and experi
 We report (i) win rate and average reward for tournament-style evaluation, and (ii) summary statistics of game length (turns per game) under random play. The code writes training metrics to \texttt{runs/<run\_id>/metrics\_train.csv} and evaluation metrics to \texttt{runs/<run\_id>/metrics\_eval.csv} \parencite{policyuno_repo}.
 
 \subsection{Reproducibility checklist}
-\begin{itemize}
-  \item \textbf{Random seeds.} Training and evaluation set seeds for NumPy and PyTorch; the environment is also initialised with a seed parameter \parencite{policyuno_repo}.
-  \item \textbf{Artifacts.} Each run stores \texttt{config.json}, per-iteration tournament logs (\texttt{tournaments/dqn\_iter\_<i>.jsonl}), and plots under \texttt{runs/<run\_id>/plots/} \parencite{policyuno_repo}.
-  \item \textbf{LLM evaluation.} OpenRouter opponents are specified by model slugs (e.g., \texttt{google/gemini-3-flash-preview}, \texttt{openai/gpt-5.2}, \texttt{anthropic/claude-opus-4.5}) and queried with \texttt{max\_tokens=50} and \texttt{temperature=0.1} in our adapter \parencite{policyuno_repo}.
-\end{itemize}
+\textbf{Random seeds.} Training and evaluation set seeds for NumPy and PyTorch; the environment is also initialised with a seed parameter \parencite{policyuno_repo}.
+
+\textbf{Artifacts.} Each run stores \texttt{config.json}, per-iteration tournament logs (\texttt{tournaments/dqn\_iter\_<i>.jsonl}), and plots under \texttt{runs/<run\_id>/plots/} \parencite{policyuno_repo}.
+
+\textbf{LLM evaluation.} OpenRouter opponents are specified by model slugs (e.g., \texttt{google/gemini-3-flash-preview}, \texttt{openai/gpt-5.2}, \texttt{anthropic/claude-opus-4.5}) and queried with \texttt{max\_tokens=50} and \texttt{temperature=0.1} in our adapter \parencite{policyuno_repo}.
 
 \subsection{Hyperparameter configuration}
 \begin{figure}[ht]
@@ -343,13 +369,27 @@ Games per iteration & 100 & Tournament size \\
 \begin{figure}[ht]
   \centering
   \maybeincludegraphics[width=0.45\linewidth]{fig2_dqn_avg_reward_over_iters.png}
-  \caption{Average reward over training iterations.}
+  \caption{Average reward over 10{,}000 training iterations (100 games per iteration; 1{,}000{,}000 games total).}
   \label{fig:training-curve}
 \end{figure}
 
-Figure~\ref{fig:training-curve} reports the evolution of training reward, which serves as a coarse indicator of policy improvement and training stability over iterations.
+Figure~\ref{fig:training-curve} reports the evolution of training reward, which serves as a coarse indicator of policy improvement and training stability over iterations. Over 10{,}000 iterations, the agent improves from negative average reward to stable positive performance around $+0.22$.
 
-The training progression exhibits three phases: (i) rapid learning in early iterations (1--50), (ii) strategy refinement (50--200), and (iii) convergence after approximately 200 iterations.
+\paragraph{Final evaluation versus random play (sanity check).}
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Metric & Our model & Reference report & Difference \\
+\midrule
+Win rate vs. random & 61.8\% & 62.2\% & $-0.4$\% \\
+Average reward & $+0.236$ & $+0.244$ & $-0.008$ \\
+Training games & 1{,}000{,}000 & $\sim$350{,}000 & +185\% \\
+Algorithm & Double DQN & DQN & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The reference values are taken from the Uno reinforcement learning course report baseline \parencite{brown_uno_rl_report}.
 
 \section{Evaluation: RL Agent vs. Large Language Models}
 \subsection{Experimental design}
@@ -439,7 +479,7 @@ export OPENROUTER_API_KEY=your_key_here
 python -m rl.game_statistics --games 100000 --seed 42
 
 # Train DQN
-python -m rl.dqn_train --iters 1000 --games_per_iter 100 --seed 42
+python -m rl.dqn_train --iters 10000 --games_per_iter 100 --seed 42
 
 # Evaluate a saved run
 python -m rl.eval --run_id <run_id> --games 1000 --seed 42

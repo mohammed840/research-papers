@@ -13,7 +13,7 @@ contributions:
   - "A fixed-dimensional state encoding aligned with Uno’s public/private information."
   - "Tournament-based experience collection and evaluation protocol for two-player Uno."
   - "Empirical comparison of the learned RL agent against random baselines and multiple LLM opponents (conditional on API configuration)."
-abstract: "We study Deep Q-Network (DQN) learning for Uno, an imperfect-information card game with stochastic transitions and a variable legal action set. We introduce a fixed-dimensional state encoding and a masked discrete action encoding, and train the agent using tournament-based experience collection. Using 100,000 random-play simulations, we report baseline game statistics and evaluate the learned agent against API-served LLM opponents. Because LLM endpoints may change over time, these results are conditional on the specific model identifiers and access configuration."
+abstract: "We study Deep Q-Network (DQN) learning for Uno, an imperfect-information card game with stochastic transitions and a variable legal action set. We introduce a fixed-dimensional state encoding and a masked discrete action encoding, and train the agent using tournament-based experience collection. Using 100,000 random-play simulations, we report baseline game statistics and evaluate the learned agent against API-served LLM opponents. Because LLM endpoints may change over time, these results are conditional on the specific model identifiers and access configuration. Principal finding: Our DQN agent achieves an 80% win rate against Gemini 3 Flash and GPT 5.2 in our evaluation harness, but only a 20% win rate against Opus 4.5."
 ---
 
 {::nomarkdown}
